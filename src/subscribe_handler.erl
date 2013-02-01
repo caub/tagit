@@ -2,7 +2,7 @@
 
 -module(subscribe_handler).
 -behaviour(cowboy_http_handler).
--export([init/3, handle/2, terminate/2]).
+-export([init/3, handle/2, terminate/2, update_tag/3]).
 -include_lib("stdlib/include/ms_transform.hrl").
 
 init({_Any, http}, Req, []) ->
@@ -24,9 +24,9 @@ handle(Req, State) ->
 
 			case ets:lookup(tags, Tag) of 
 				[] -> 
-					update_tag(Tag, Arg, From);
+					spawn(?MODULE, update_tag, [Tag, Arg, From]);
 				[{_,OldArg,OldFrom}|T] when OldArg/=Arg; From<OldFrom ->
-					update_tag(Tag, Arg, From); % could add , OldFrom to avoid redoing already parsed msgs
+					spawn(?MODULE, update_tag, [Tag, Arg, From]); % should add OldFrom to parse msgs between From and OldFrom, but for the moment OldFrom is current time
 				_ -> ok
 			end,
 			ets:insert(tags, {Tag, Arg, From})

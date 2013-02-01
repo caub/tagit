@@ -24,19 +24,20 @@ terminate(_Req, _State) ->
 websocket_init(_Any, Req, []) ->
 	%gproc:reg({p, l, ?WSKey}),
 	{PeerAddr, _} = cowboy_http_req:peer_addr(Req),
-	{Path2, _} = cowboy_http_req:qs_val(<<"path">>, Req),
-	{ok, Path} = json:decode(Path2), %todo handle empty path
+	{Path, _} = cowboy_http_req:qs_val(<<"path">>, Req, <<"">>),
+
 	io:format("o0 ~p ~n", [[self(), Path]]),
 	%keep subscriptions in session for each peer
-	ets:insert(websockets, {self(), Path}),
+	ets:insert(websockets, {self(), re:split(Path, "&", [{return,binary}])}),
 
 	Req2 = cowboy_http_req:compact(Req),
 	{ok, Req2, undefined, hibernate}.
 
 websocket_handle({text, Msg}, Req, State) ->
 	%gproc:send({p, l, ?WSKey}, {self(), ?WSKey, Msg}),
-	io:format("o20 we dont care of incoming msgs ~p ~n", [Msg]),
-
+	io:format("o20 incoming ~p ~n", [Msg]),
+	% update listening path
+	ets:insert(websockets, {self(), re:split(Msg, "&", [{return,binary}])}),
 	{ok, Req, State};
 
 websocket_handle(_Any, Req, State) ->

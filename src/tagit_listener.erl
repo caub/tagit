@@ -22,7 +22,7 @@ init([]) ->
 	{ok, []}.
 
 handle_call({Id, Author, Time, Text}, _From, State) ->
-	% can put handle_info code herev
+	% can put handle_info code here
 	{reply, put, State};
 
 handle_call(_Message, _From, State) ->
@@ -44,6 +44,7 @@ handle_info({Id, Author, Time, Text}, State) ->
 	{ok, Msg} = json:encode([Id, Author, Time, Text]++[TagsMatched]),
 
 	ets:foldl(fun({Pid, Path}, _)-> 
+		io:format("o33 ~p ~p ~n", [Path, TagsMatched]),
 		case path_match(Path, TagsMatched, [ok]) of 
 			true -> Pid ! Msg;
 			_ -> ok
@@ -68,9 +69,10 @@ re_match(Data, Re) ->
 	end.
 
 
-path_match(_, Tags,  []) -> false;
-path_match([], Tags, Acc) -> true;
+path_match(_, _Tags,  []) -> false;
+path_match([], _Tags, _Acc) -> true;
+path_match([<<"">>], _Tags, _Acc) -> true;
 path_match([Tag|Rest],Tags, Acc) ->
-	path_match(Rest, Tags, [T || T <- string:tokens(binary_to_list(Tag), " " ), lists:member(list_to_binary(T), Tags)]).
+	path_match(Rest, Tags, [T || T <- re:split(Tag, " |\\+", [{return,binary}]), lists:member(T, Tags)]).
 
 

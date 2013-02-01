@@ -22,7 +22,6 @@ start(_Type, _Args) ->
 			% {[<<"eventsource">>, <<"live">>], eventsource_emitter, []},
 			{[<<"pub">>], publish_handler, []},
 			{[<<"sub">>], subscribe_handler, []},
-			{[], tag_handler, []},
 			{'_', default_handler, []}
 		]}
 	],
@@ -38,15 +37,18 @@ start(_Type, _Args) ->
 	% ),
 
 	%% init a session table
-	%ets:new(session,[public,named_table,bag]),
+	%ets:new(session,[public,named_table]),
 	%% init fake database
+
+	%% should have dets replicas, and save it in dets when there'a save action or at each insert
 	ets:new(posts,[public, named_table]),
+	%                 Id      Author      Time                   Text
 	ets:insert(posts, {1, <<"chrisr">>, <<"2013-01-16T12:09:01">>, <<"Erlang conference @Barcelona">>}),
-	ets:insert(posts, {2, <<"fabian veel">>, <<"2013-01-16T12:09:12">>, <<"Follow nba news on <a href='http://www.basketusa.com/'>www.basketusa.com</a>">>}),
-	ets:insert(posts, {3, <<"fabian veel">>, <<"2013-01-16T12:09:14">>, <<"miami nba news">>}),
-	ets:insert(posts, {4, <<"fabian veel">>, <<"2013-01-17T15:54:55">>, <<"LAL: kobe nba news">>}),
-	ets:insert(posts, {5, <<"fabian veel">>, <<"2013-01-18T14:19:01">>, <<"@Lakers bryant 50pts vs okc nba news">>}),
-	ets:insert(posts, {6, <<"fabian veel">>, <<"2013-01-18T16:02:34">>, <<"kobe injured @lakers nba">>}),
+	ets:insert(posts, {2, <<"fabian">>, <<"2013-01-16T12:09:12">>, <<"Follow nba news on <a href='http://www.basketusa.com/'>www.basketusa.com</a>">>}),
+	ets:insert(posts, {3, <<"fabian">>, <<"2013-01-16T12:09:14">>, <<"miami nba news">>}),
+	ets:insert(posts, {4, <<"fabian">>, <<"2013-01-17T15:54:55">>, <<"LAL: kobe nba news">>}),
+	ets:insert(posts, {5, <<"fabian">>, <<"2013-01-18T14:19:01">>, <<"@Lakers bryant 50pts vs okc nba news">>}),
+	ets:insert(posts, {6, <<"fabian">>, <<"2013-01-18T16:02:34">>, <<"kobe injured @lakers nba">>}),
 
 	ets:new(posts_tags, [public, named_table, bag]),
 	ets:insert(posts_tags, {1,<<"erlang">>}),
@@ -57,6 +59,7 @@ start(_Type, _Args) ->
 	ets:insert(posts_tags, [{6, <<"nba">>},{6, <<"lakers">>},{6, <<"kobebryant">>}]),
 
 	ets:new(tags, [public, named_table]),
+	%                   Id           Expression matched   Time (of creation)
 	ets:insert(tags, {<<"erlang">>, <<"(?i)erlang">>, <<"2013-01-10">>}),
 	ets:insert(tags, {<<"nba">>, <<"(?i)nba|basket">>, <<"2013-01-10">>}),
 	ets:insert(tags, {<<"on">>, <<"(?i)on">>, <<"2013-01-28">>}),
@@ -66,7 +69,8 @@ start(_Type, _Args) ->
 	
 
 	ets:new(websockets, [public, named_table]),
-	%see ws_handler ,, bind websocket with Current Tags
+	%      Pid       Tag path
+	%see websocket_handler
 
 	tagit_listener:start_link(),
 	

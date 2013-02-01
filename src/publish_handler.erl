@@ -3,6 +3,7 @@
 -module(publish_handler).
 -behaviour(cowboy_http_handler).
 -export([init/3, handle/2, terminate/2, intersect/2, get_ids/1]).
+-include_lib("stdlib/include/ms_transform.hrl").
 
 init({_Any, http}, Req, []) ->
 	{ok, Req, undefined}.
@@ -24,20 +25,28 @@ handle(Req, State) ->
 			ets:insert(posts, {Id, Author, Time, Text}),
 
 			%% route the data to the pubsub broker
-			tagit_listener ! {Id, Author, Time, Text},
+			tagit_listener ! {Id, Author, Time, Text}, % or tagit_listener:process({Id, Author, Time, Text}),
 
 			{ok, Req2} = cowboy_http_req:reply(200, [], Req);
 
 		{_, Req} ->
-			{Path2, _} = cowboy_http_req:qs_val(<<"path">>, Req),
-			{ok, [H|Path]} = json:decode(Path2), %todo handle empty path
-			io:format("o20 ~p ~n", [[H|Path]]),
+			{Path, _} = cowboy_http_req:qs_val(<<"path">>, Req, <<"">>),
+			% todo: real pagination
+			if
+				Path == <<"">> ->
+					{Count2, _} = cowboy_http_req:qs_val(<<"count">>, Req),
+					Size = ets:info(posts, size), Count = list_to_integer(binary_to_list(Count2)), 
+					io:format("o20 ~p ~p ~n", [Size, Count ]),
+					Posts = ets:select(posts, ets:fun2ms(fun({Id,A,T,C}) when Id > Size-Count -> [Id,A,T,C] end)),
+					Res = [ [Id,A,T,C]++[lists:flatten(ets:match(posts_tags, {Id,'$1'}))] || [Id,A,T,C] <- Posts];
+				true ->		
+					[H|Rest] = re:split(Path, "&", [{return,binary}]),
+					io:format("o20 ~p ~n", [[H|Rest]]),
 
-			Ids = from_path(Path, get_ids(H)),
-			io:format("o20 ~p ~n", [Ids]),
-			Res = [ tuple_to_list(hd(ets:lookup(posts, Id)))++[lists:flatten(ets:match(posts_tags, {Id,'$1'}))] || Id <- Ids],
+					Ids = from_path(Rest, get_ids(H)),
+					Res = [ tuple_to_list(hd(ets:lookup(posts, Id)))++[lists:flatten(ets:match(posts_tags, {Id,'$1'}))] || Id <- Ids]
+			end,
 			{ok, Resj} = json:encode(Res),
-			io:format("o20 ~p ~n", [Resj]),
 			{ok, Req2} = cowboy_http_req:reply(200, [{'Content-Type', <<"application/json">>}], Resj, Req)		
 	end,
 	{ok, Req2, State}.
@@ -51,12 +60,11 @@ from_path([], Ids) -> Ids;
 from_path(_, []) -> []; %no need to continue
 from_path([Tagstr|Rest], Ids) ->
 	Ids2 = get_ids(Tagstr),
-	io:format("o0 ~p ~p ~n", [Ids2,Ids]),
 	from_path(Rest, intersect(Ids2, Ids)).
 
 get_ids(Tagstr) ->
-	Tags = string:tokens(binary_to_list(Tagstr), " " ),
-	Ids2 = lists:sort(proplists:get_keys(lists:flatmap(fun(Tag)-> ets:match_object(posts_tags, {'$1',list_to_binary(Tag)}) end, Tags))).
+	Tags = re:split(Tagstr, " |\\+", [{return,binary}]),
+	Ids2 = lists:sort(proplists:get_keys(lists:flatmap(fun(Tag)-> ets:match_object(posts_tags, {'$1',Tag}) end, Tags))).
 
 
 intersect([], _) -> [];
