@@ -12,12 +12,14 @@
 start(_Type, _Args) ->
 	Dispatch = cowboy_router:compile([
 		{'_', [
-			{"/favicon.ico", static_handler, []},
-			{"/static/[...]", static_handler, []},
+			{"/static/[...]", cowboy_static, [
+				{directory, {priv_dir, tagit, []}},
+				{mimetypes, {fun mimetypes:path_to_mimes/2, default}}
+			]},
 			{"/pub", publish_handler, []},
 			{"/sub", subscribe_handler, []},
 			{"/websocket", ws_handler, []},
-			{"/", default_handler, []}
+			{'_', default_handler, []}
 		]}
 	]),
 	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}],
@@ -50,13 +52,14 @@ start(_Type, _Args) ->
 	ets:insert(tags, {<<"erlang">>, <<"(?i)erlang">>, <<"2013-01-10">>}),
 	ets:insert(tags, {<<"nba">>, <<"(?i)nba|basket">>, <<"2013-01-10">>}),
 	ets:insert(tags, {<<"on">>, <<"(?i)on">>, <<"2013-01-28">>}),
+	ets:insert(tags, {<<"foobar">>, <<"foo|bar">>, <<"2013-01-10">>}),
 	ets:insert(tags, {<<"news">>, <<"(?i)news">>, <<"2013-01-28">>}),
 	ets:insert(tags, {<<"lakers">>, <<"(?i)lakers|lal|(los angeles lakers)">>, <<"2013-01-10">>}),
 	ets:insert(tags, {<<"kobebryant">>, <<"(?i)kb|kobe|bryant">>, <<"2013-01-10">>}),
 	
 
 	ets:new(websockets, [public, named_table]),
-	%      Pid       Tag path
+	%                    Pid       Tag path
 	%see websocket_handler
 
 

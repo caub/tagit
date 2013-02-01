@@ -69,9 +69,9 @@ re_match(Data, Re) ->
 	end.
 
 
-path_match(_, []) -> false;
 path_match([], _Tags) -> true;
-path_match([<<"">>], _Tags) -> true;
+path_match([<<>>], _Tags) -> true;
+path_match(_, []) -> false;
 path_match([Tag|Rest],Tags) ->
 	path_match(Rest, [T || T <- re:split(Tag, " |\\+", [{return,binary}]), lists:member(T, Tags)]).
 
