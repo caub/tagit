@@ -17,7 +17,9 @@ handle(Req, State) ->
 	case Action of 
 		<<"delete">> -> 
 			ets:match_delete(tags, Tag),
-			ets:match_delete(posts_tags, {'_', Tag});
+			ets:match_delete(posts_tags, {'_', Tag}),
+			dets:match_delete(dtags, Tag),
+			dets:match_delete(dposts_tags, {'_', Tag});
 		_ -> 
 			% from time
 			{From, _} = cowboy_req:qs_val(<<"from">>, Req, <<"2013">>),
@@ -30,7 +32,8 @@ handle(Req, State) ->
 					spawn(?MODULE, update_tag, [Tag, Arg, From]); % should add OldFrom to parse msgs between From and OldFrom, but for the moment OldFrom is current time
 				_ -> ok
 			end,
-			ets:insert(tags, {Tag, Arg, From})
+			ets:insert(tags, {Tag, Arg, From}),
+			dets:insert(dtags, {Tag, Arg, From})
 
 	end,
 	{ok, Req2} = cowboy_req:reply(200, [], <<"done">>, Req),
@@ -46,7 +49,7 @@ update_tag(Tag, Arg, From) ->
 	lists:foldl(fun({I,_A,_T,C}, _) ->
 		case re_match(C, Arg) of 
 			nomatch -> ok;
-			_ -> ets:insert(posts_tags, {I, Tag})
+			_ -> ets:insert(posts_tags, {I, Tag}), dets:insert(dposts_tags, {I, Tag})
 		end 
 	end, [], Posts).
 

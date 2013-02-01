@@ -32,13 +32,12 @@ function ready(){
 		$('#tags').append('<br><span>'+tags[i][0]+'</span><a class="tag big" onclick="location.hash=\''+tags[i][1]+'\'">'+tags[i][1]+'</a><span>'+tags[i][2]+'</span>');
 	}
 
-	$('#browse_tag').val(location.hash.substr(1)||'nba+basket+kobebryant&lakers');
+	$('#browse_tag').val(location.hash.substr(1)||'fubar+any+tag&erlang');
 }
 
 function change(evt){
 	$('#posts > dl').empty();
 	getPosts(location.hash.substr(1), 10);
-	console.log(location.hash.substr(1));
 	if (!!evt){
 		ws.send(location.hash.substr(1));
 	}
@@ -96,7 +95,7 @@ function sub(tag, arg){
 
 function unsub(tag){
 	$.get('/sub',{
-			tag: JSON.stringify(tag),
+			tag: tag,
 			action: 'delete'
 		}, function(res){
 			alert(res);

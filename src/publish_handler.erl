@@ -24,6 +24,7 @@ handle(Req, State) ->
 			% cheap Id
 			Id = ets:info(posts, size) + 1,
 			ets:insert(posts, {Id, Author, Time, Text}),
+			dets:insert(dposts, {Id, Author, Time, Text}),
 
 			%% route the data to the pubsub broker
 			tagit_listener ! {Id, Author, Time, Text}, % or tagit_listener:process({Id, Author, Time, Text}),
@@ -31,10 +32,10 @@ handle(Req, State) ->
 			{ok, Req2} = cowboy_req:reply(200, [], Req);
 
 		{_, Req} ->
-			{Path, _} = cowboy_req:qs_val(<<"path">>, Req, <<"">>),
+			{Path, _} = cowboy_req:qs_val(<<"path">>, Req, <<>>),
 			% todo: real pagination
 			if
-				Path == <<"">> ->
+				Path == <<>> ->
 					{Count2, _} = cowboy_req:qs_val(<<"count">>, Req, <<"10">>),
 					Size = ets:info(posts, size), Count = list_to_integer(binary_to_list(Count2)), 
 					io:format("o20 ~p ~p ~n", [Size, Count ]),

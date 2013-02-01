@@ -12,12 +12,10 @@ init({tcp, http}, _Req, _Opts) ->
 
 websocket_init(_TransportName, Req, _Opts) ->
 	%gproc:reg({p, l, ?WSKey}),
-	{Path, _} = cowboy_req:qs_val(<<"path">>, Req, <<"">>),
-
+	{Path, _} = cowboy_req:qs_val(<<"path">>, Req, <<>>),
 	io:format("o0 ~p ~n", [[self(), Path]]),
 	%keep subscriptions in session for each peer
 	ets:insert(websockets, {self(), re:split(Path, "&", [{return,binary}])}),
-
 	{ok, Req, undefined_state}.
 
 websocket_handle({text, Msg}, Req, State) ->
