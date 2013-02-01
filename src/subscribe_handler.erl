@@ -1,17 +1,18 @@
 %% Feel free to use, reuse and abuse the code in this file.
 
 -module(subscribe_handler).
--behaviour(cowboy_http_handler).
--export([init/3, handle/2, terminate/2, update_tag/3]).
+
+-export([init/3, handle/2, terminate/3, update_tag/3]).
+
 -include_lib("stdlib/include/ms_transform.hrl").
 
-init({_Any, http}, Req, []) ->
+init(_Transport, Req, []) ->
 	{ok, Req, undefined}.
 
 handle(Req, State) ->
 	%reply with active subscriptions from session
-	{Action, _} = cowboy_http_req:qs_val(<<"action">>, Req, <<"update">>),
-	{Tag, _} = cowboy_http_req:qs_val(<<"tag">>, Req),
+	{Action, _} = cowboy_req:qs_val(<<"action">>, Req, <<"update">>),
+	{Tag, _} = cowboy_req:qs_val(<<"tag">>, Req),
 	io:format("o20 ~p ~n", [ Tag]),
 	case Action of 
 		<<"delete">> -> 
@@ -19,30 +20,30 @@ handle(Req, State) ->
 			ets:match_delete(posts_tags, {'_', Tag});
 		_ -> 
 			% from time
-			{From, _} = cowboy_http_req:qs_val(<<"from">>, Req, <<"2013">>),
-			{Arg, _} = cowboy_http_req:qs_val(<<"arg">>, Req),
+			{From, _} = cowboy_req:qs_val(<<"from">>, Req, <<"2013">>),
+			{Arg, _} = cowboy_req:qs_val(<<"arg">>, Req),
 
 			case ets:lookup(tags, Tag) of 
 				[] -> 
 					spawn(?MODULE, update_tag, [Tag, Arg, From]);
-				[{_,OldArg,OldFrom}|T] when OldArg/=Arg; From<OldFrom ->
+				[{_,OldArg,OldFrom}|_T] when OldArg/=Arg; From<OldFrom ->
 					spawn(?MODULE, update_tag, [Tag, Arg, From]); % should add OldFrom to parse msgs between From and OldFrom, but for the moment OldFrom is current time
 				_ -> ok
 			end,
 			ets:insert(tags, {Tag, Arg, From})
 
 	end,
-	{ok, Req2} = cowboy_http_req:reply(200, [], <<"done">>, Req),
+	{ok, Req2} = cowboy_req:reply(200, [], <<"done">>, Req),
 	{ok, Req2, State}.
 
 
-terminate(_Req, _State) ->
+terminate(_Reason, _Req, _State) ->
 	ok.
 
 update_tag(Tag, Arg, From) -> 
 	% possibly long
 	Posts = ets:select(posts, ets:fun2ms(fun({I,A,T,C}) when From < T -> {I,A,T,C} end)),
-	lists:foldl(fun({I,A,T,C}, _) ->
+	lists:foldl(fun({I,_A,_T,C}, _) ->
 		case re_match(C, Arg) of 
 			nomatch -> ok;
 			_ -> ets:insert(posts_tags, {I, Tag})

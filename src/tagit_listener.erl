@@ -21,7 +21,7 @@ init([]) ->
 	%timer:send_interval(1000, {tick, '_'}), %% starts a timer service
 	{ok, []}.
 
-handle_call({Id, Author, Time, Text}, _From, State) ->
+handle_call({_Id, _Author, _Time, _Text}, _From, State) ->
 	% can put handle_info code here
 	{reply, put, State};
 
@@ -34,7 +34,7 @@ handle_cast(_Message, State) ->
 handle_info({Id, Author, Time, Text}, State) ->
 
 	% process the message through all tags
-	TagsMatched = ets:foldl(fun({T,R,D}, Acc)-> 
+	TagsMatched = ets:foldl(fun({T,R,_}, Acc)-> 
 		case re_match(Text, R) of 
 			nomatch -> Acc;
 			_ -> ets:insert(posts_tags, {Id, T}), [T|Acc]
@@ -45,7 +45,7 @@ handle_info({Id, Author, Time, Text}, State) ->
 
 	ets:foldl(fun({Pid, Path}, _)-> 
 		io:format("o33 ~p ~p ~n", [Path, TagsMatched]),
-		case path_match(Path, TagsMatched, [ok]) of 
+		case path_match(Path, TagsMatched) of 
 			true -> Pid ! Msg;
 			_ -> ok
 		end
@@ -69,10 +69,10 @@ re_match(Data, Re) ->
 	end.
 
 
-path_match(_, _Tags,  []) -> false;
-path_match([], _Tags, _Acc) -> true;
-path_match([<<"">>], _Tags, _Acc) -> true;
-path_match([Tag|Rest],Tags, Acc) ->
-	path_match(Rest, Tags, [T || T <- re:split(Tag, " |\\+", [{return,binary}]), lists:member(T, Tags)]).
+path_match(_, []) -> false;
+path_match([], _Tags) -> true;
+path_match([<<"">>], _Tags) -> true;
+path_match([Tag|Rest],Tags) ->
+	path_match(Rest, [T || T <- re:split(Tag, " |\\+", [{return,binary}]), lists:member(T, Tags)]).
 
 

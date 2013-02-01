@@ -2,17 +2,14 @@
 
 {application, tagit, [
 	{description, ""},
-	{vsn, "0.1.0"},
+	{vsn, "1"},
 	{modules, []},
-	{registered, [tagit_sup]},
+	{registered, []},
 	{applications, [
 		kernel,
 		stdlib,
-		crypto,
-		public_key,
-		ssl,
 		cowboy
 	]},
-	{mod, {tagit, []}},
+	{mod, {tagit_app, []}},
 	{env, []}
 ]}.

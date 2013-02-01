@@ -1,22 +1,22 @@
 %% Feel free to use, reuse and abuse the code in this file.
 
 -module(default_handler).
--behaviour(cowboy_http_handler).
--export([init/3, handle/2, terminate/2]).
 
-init({_Any, http}, Req, []) ->
+-export([init/3, handle/2, terminate/3]).
+
+init(_Transport, Req, []) ->
 	{ok, Req, undefined}.
 
 handle(Req, State) ->
-	{PeerAddr, _} = cowboy_http_req:peer_addr(Req),
-	{Path, _} = cowboy_http_req:path(Req),
+	{Path, _} = cowboy_req:path(Req),
 	io:format("o21 ~p ~n", [Path]),
 	Tags = ets:match(tags, {'$1','$2','$3'}),
 	{ok, Tagsj} = json:encode(Tags),
 	{ok, Countsj} = json:encode([ [length(ets:match(posts_tags, {'_',T})),T,A] || [T,A,_] <- Tags]),
-	{Host, _} = cowboy_http_req:raw_host(Req),
-	{Port, _} = cowboy_http_req:port(Req),
-	{ok, Req2} = cowboy_http_req:reply(200, [{'Content-Type', <<"text/html">>}],
+	{Host, _} = cowboy_req:host(Req),
+	{Port, _} = cowboy_req:port(Req),
+	io:format("o21 ~p ~n", [Port]),
+	{ok, Req2} = cowboy_req:reply(200, [],
 [<<"<html>
 <head>
 <meta charset='utf-8'>
@@ -196,6 +196,7 @@ function Post(){
 function getPosts(path, count){
 	$.getJSON('/pub', {path: path, count: count},
 		function(res){
+			res.sort(function(a,b){return b-a;});
 			for (var i=0; i<res.length; i++){
 				addMsg(res[i]);
 			}
@@ -259,5 +260,5 @@ function unsub(tag){
 	{ok, Req2, State}.
 
 
-terminate(_Req, _State) ->
+terminate(_Reason, _Req, _State) ->
 	ok.
