@@ -4,13 +4,14 @@ window.onhashchange = change;
 
 
 function ready(){
-	change();
+	var path = location.hash.indexOf("#tag=")==0 ? location.hash.substr(5) : '';
+	getPosts(path, 10);
 	if ('MozWebSocket' in window) {
 		WebSocket = MozWebSocket;
 	}
 	if ('WebSocket' in window) {
 		// browser supports websockets
-		ws = new WebSocket('ws://'+location.host+'/websocket?path='+location.hash.substr(1));
+		ws = new WebSocket('ws://'+location.host+'/websocket?path='+path);
 		ws.onopen = function(evt) {
 			console.log('websocket connected!');
 		};
@@ -29,24 +30,28 @@ function ready(){
 
 	tags.sort(function(a,b){return b[0]-a[0];});
 	for (var i=0; i<tags.length; i++){
-		$('#tags').append('<br><span>'+tags[i][0]+'</span><a class="tag big" onclick="location.hash=\''+tags[i][1]+'\'">'+tags[i][1]+'</a><span>'+tags[i][2]+'</span>');
+		$('#tags').append('<br><span>'+tags[i][0]+'</span><a class="tag big" onclick="location.hash=\'tag='+tags[i][1]+'\'">'+tags[i][1]+'</a><span>'+tags[i][2]+'</span>');
 	}
 
-	$('#browse_tag').val(location.hash.substr(1)||'fubar+any+tag&erlang');
+	$('#browse_tag').val('fubar+any+tag&erlang');
+	$('#browse_tag').keyup(function(evt){
+		if (evt.keyCode==13){
+			location.hash='tag='+this.value;
+		}
+	});
 }
 
 function change(evt){
-	$('#posts > dl').empty();
-	getPosts(location.hash.substr(1), 10);
-	if (!!evt){
-		ws.send(location.hash.substr(1));
+	if (location.hash.indexOf("#tag=")==0){
+		getPosts(location.hash.substr(5), 10);
+		ws.send(location.hash.substr(5));
 	}
 }
 
 function addMsg(t){
 	var msg = $('<dt id="'+t[0]+'"><span class="message">'+t[1]+'</span><time datetime="'+t[2]+'">'+parseDate(t[2])+'</time></dt><dd>'+t[3]+'</dd>');
 	for (var i=0; i<t[4].length; i++){
-		msg.first().prepend('<a class="tag" onclick="location.hash=\''+t[4][i]+'\'">'+t[4][i]+'</a>');
+		msg.first().prepend('<a class="tag" onclick="location.hash=\'tag='+t[4][i]+'\'">'+t[4][i]+'</a>');
 	}
 	msg.hide().prependTo('#posts > dl').fadeIn();
 }
@@ -72,13 +77,15 @@ function Post(){
 	);
 }
 
-function getPosts(path, count){
-	$.getJSON('/pub', {path: path, count: count},
+function getPosts(path, limit){
+	$.getJSON('/pub', {path: path, limit: limit},
 		function(res){
-			res.sort();
+			res.sort(function(a,b){return a[0]-b[0];});
+			$('#posts > dl').empty();
 			for (var i=0; i<res.length; i++){
 				addMsg(res[i]);
 			}
+			$('#browse_tag').val(path);
 			//$('<a onclick>load more</a>').appendTo('#posts > dl').fadeIn();
 		}
 	);

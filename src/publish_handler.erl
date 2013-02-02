@@ -33,13 +33,13 @@ handle(Req, State) ->
 
 		{_, Req} ->
 			{Path, _} = cowboy_req:qs_val(<<"path">>, Req, <<>>),
-			% todo: real pagination
+			% todo: real pagination with limit / offset
 			if
 				Path == <<>> ->
-					{Count2, _} = cowboy_req:qs_val(<<"count">>, Req, <<"10">>),
-					Size = ets:info(posts, size), Count = list_to_integer(binary_to_list(Count2)), 
-					io:format("o20 ~p ~p ~n", [Size, Count ]),
-					Posts = ets:select(posts, ets:fun2ms(fun({Id,A,T,C}) when Id > Size-Count -> [Id,A,T,C] end)),
+					{Limit2, _} = cowboy_req:qs_val(<<"limit">>, Req, <<"10">>),
+					Size = ets:info(posts, size), Limit = list_to_integer(binary_to_list(Limit2)), 
+					io:format("o20 ~p ~p ~n", [Size, Limit ]),
+					Posts = ets:select(posts, ets:fun2ms(fun({Id,A,T,C}) when Id > Size-Limit -> [Id,A,T,C] end)),
 					Res = [ [Id,A,T,C]++[lists:flatten(ets:match(posts_tags, {Id,'$1'}))] || [Id,A,T,C] <- Posts];
 				true ->		
 					[H|Rest] = re:split(Path, "&", [{return,binary}]),
@@ -57,13 +57,14 @@ handle(Req, State) ->
 terminate(_Reason, _Req, _State) ->
 	ok.
 
-
+%% util function that recurse get_ids and intersect along the path of tags (tags separated with &)
 from_path([], Ids) -> Ids;
 from_path(_, []) -> []; %no need to continue
 from_path([Tagstr|Rest], Ids) ->
 	Ids2 = get_ids(Tagstr),
 	from_path(Rest, intersect(Ids2, Ids)).
 
+%% util function to get posts ids with certain tags
 get_ids(Tagstr) ->
 	Tags = re:split(Tagstr, " |\\+", [{return,binary}]),
 	lists:sort(proplists:get_keys(lists:flatmap(fun(Tag)-> ets:match_object(posts_tags, {'$1',Tag}) end, Tags))).

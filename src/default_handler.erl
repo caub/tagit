@@ -32,10 +32,10 @@ handle(Req, State) ->
 <div id='home'>
 
 <div id='header'>
-	<a id='home__s' onclick='location.hash=\"\"'>Tagit</a>
+	<a id='home__s' onclick='location.hash=\"tag=\"'>Tagit</a>
 	<div id='post__s'><a onclick='$(\"#tags\").fadeToggle();'>Tags</a><a onclick='$(\"#post_\").fadeToggle();'>Write</a></div>
 	<input id='browse_tag' type='text' style='width: 320px;' title='put tags separated with & for AND and + for OR (they are grouped by OR)'>
-	<button onclick='location.hash=document.getElementById(\"browse_tag\").value'>Browse</button>
+	<button onclick='location.hash=\"tag=\"+document.getElementById(\"browse_tag\").value'>Browse</button>
 </div>
 
 <div id='posts'>

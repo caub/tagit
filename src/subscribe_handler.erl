@@ -46,12 +46,14 @@ terminate(_Reason, _Req, _State) ->
 update_tag(Tag, Arg, From) -> 
 	% possibly long
 	Posts = ets:select(posts, ets:fun2ms(fun({I,A,T,C}) when From < T -> {I,A,T,C} end)),
-	lists:foldl(fun({I,_A,_T,C}, _) ->
+	Data = lists:foldl(fun({I,_A,_T,C}, Acc) ->
 		case re_match(C, Arg) of 
-			nomatch -> ok;
-			_ -> ets:insert(posts_tags, {I, Tag}), dets:insert(dposts_tags, {I, Tag})
+			nomatch -> Acc;
+			_ -> [{I, Tag}|Acc]
 		end 
-	end, [], Posts).
+	end, [], Posts),
+	ets:insert(posts_tags, Data),
+	dets:insert(dposts_tags, Data).
 
 re_match(Data, Re) ->
 	try

@@ -37,9 +37,11 @@ handle_info({Id, Author, Time, Text}, State) ->
 	TagsMatched = ets:foldl(fun({T,R,_}, Acc)-> 
 		case re_match(Text, R) of 
 			nomatch -> Acc;
-			_ -> ets:insert(posts_tags, {Id, T}), dets:insert(dposts_tags, {Id, T}), [T|Acc]
+			_ -> [T|Acc]
 		end
 	end, [], tags),
+	ets:insert(posts_tags, Data = [{Id, T} || T <- TagsMatched]),
+	dets:insert(dposts_tags, Data),
 	
 	{ok, Msg} = json:encode([Id, Author, Time, Text]++[TagsMatched]),
 
